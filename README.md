@@ -16,9 +16,12 @@ A modern, enterprise-ready OAuth2 authentication system using Laravel Passport a
 - Secure session management with httpOnly cookies
 - Automatic token refresh with transparent retry logic
 - Role-based access control using Spatie Laravel Permission
-- User management with granular permissions
+- Modern Access Control Dashboard with Users, Roles, and Permissions management
+- Consistent data tables with search, pagination, and action menus
+- Modal-based CRUD operations with form validation
 - Modern, responsive dashboard UI with dark mode
 - Collapsible sidebar navigation with Access Control section
+- Smooth animations and transitions throughout the interface
 
 ## Prerequisites
 
@@ -830,12 +833,106 @@ The system uses PKCE (Proof Key for Code Exchange) for enhanced security. This e
 Using Spatie Laravel Permission, the system provides granular control over user permissions. Roles can be assigned to users, and permissions can be checked both in the backend and frontend.
 
 ### Access Control Dashboard
-The dashboard provides a clean interface organized into three core modules:
-- **Users**: Manage user accounts, assign roles and permissions
-- **Roles**: Create and manage roles with associated permissions
-- **Permissions**: Define granular permissions for fine-grained access control
+The dashboard features a modern, dark-themed interface for managing users, roles, and permissions. All three modules follow a consistent design pattern with:
 
-All three modules are grouped under a collapsible "Access Control" section in the sidebar for easy navigation.
+#### Common Features Across All Modules
+
+- **Data Tables**: Searchable, paginated tables with clean layouts
+- **Action Menus**: Three-dot vertical menus with contextual actions (View, Edit, Assign, Delete)
+- **Modal Dialogs**: All create/edit/assign operations open in modal dialogs
+- **Form Validation**: Client-side validation with error feedback
+- **Toast Notifications**: Success and error feedback for all operations
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Dark Theme**: Consistent dark mode throughout the interface
+- **Smooth Animations**: Transitions and animations for better UX
+
+#### Users Management (`/dashboard/users`)
+
+**Table Columns:**
+- Avatar/Name with email
+- Role badge
+- Status badge (Active/Inactive)
+- Last login timestamp
+- Permissions badges
+- Actions menu
+
+**Available Actions:**
+- **View Profile**: Display user details in a modal
+- **Edit User**: Update name, email, and role
+- **Assign Roles**: Select multiple roles for the user
+- **Assign Permissions**: Select multiple permissions for the user
+- **Delete User**: Confirm and delete user account
+
+**API Integration:**
+- `GET /api/users` - Fetch all users
+- `POST /api/users` - Create new user
+- `PUT /api/users/{id}` - Update user
+- `DELETE /api/users/{id}` - Delete user
+- `POST /api/users/{id}/roles` - Assign roles to user
+- `POST /api/users/{id}/permissions` - Assign permissions to user
+
+#### Roles Management (`/dashboard/roles`)
+
+**Table Columns:**
+- Role name with icon and description
+- User count badge
+- Permission count badge
+- Actions menu
+
+**Available Actions:**
+- **View Details**: Show role information and assigned permissions
+- **Edit Role**: Update role name and description
+- **Assign Permissions**: Select permissions to assign to the role
+- **Delete Role**: Confirm and delete role (with user count warning)
+
+**API Integration:**
+- `GET /api/roles` - Fetch all roles
+- `POST /api/roles` - Create new role
+- `PUT /api/roles/{id}` - Update role
+- `DELETE /api/roles/{id}` - Delete role
+- `POST /api/roles/{id}/permissions` - Assign permissions to role
+
+#### Permissions Management (`/dashboard/permissions`)
+
+**Table Columns:**
+- Permission name (displayed as code) with description
+- Category badge
+- Role count badge
+- Actions menu
+
+**Available Actions:**
+- **View Details**: Show permission information and assigned roles
+- **Edit Permission**: Update permission name, description, and category
+- **Assign to Roles**: Select roles to assign this permission to
+- **Delete Permission**: Confirm and delete permission (with role count warning)
+
+**API Integration:**
+- `GET /api/permissions` - Fetch all permissions
+- `POST /api/permissions` - Create new permission
+- `PUT /api/permissions/{id}` - Update permission
+- `DELETE /api/permissions/{id}` - Delete permission
+- `POST /api/permissions/{id}/roles` - Assign permission to roles
+
+#### UI Components
+
+The dashboard uses reusable components for consistency:
+
+- **DataTable**: Generic table component with search and pagination
+- **ActionMenu**: Three-dot menu with contextual actions
+- **UserFormDialog**: Modal for creating/editing users
+- **AssignRolesDialog**: Modal for assigning roles with checkboxes
+- **AssignPermissionsDialog**: Modal for assigning permissions grouped by category
+- **DeleteConfirmDialog**: Confirmation dialog for destructive actions
+
+#### Styling and Animations
+
+The interface uses Tailwind CSS with custom design tokens for theming:
+- Consistent spacing and typography
+- Smooth transitions on hover and focus states
+- Loading states for async operations
+- Skeleton loaders for data fetching
+- Toast notifications with slide-in animations
+- Modal dialogs with fade and scale animations
 
 ## Security Considerations
 
