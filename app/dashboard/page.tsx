@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { Users, Shield, Activity, Database } from "lucide-react"
+import { Users, UserCog, Key } from "lucide-react"
 
 export default function DashboardPage() {
   const stats = [
@@ -12,25 +12,18 @@ export default function DashboardPage() {
       trend: "up",
     },
     {
-      title: "Active Sessions",
-      value: "1,234",
-      change: "+5.2%",
-      icon: Activity,
+      title: "Active Roles",
+      value: "8",
+      change: "+2",
+      icon: UserCog,
       trend: "up",
     },
     {
-      title: "Auth Requests",
-      value: "45,231",
-      change: "+18.3%",
-      icon: Shield,
+      title: "Permissions",
+      value: "24",
+      change: "+3",
+      icon: Key,
       trend: "up",
-    },
-    {
-      title: "Database Queries",
-      value: "892K",
-      change: "-2.4%",
-      icon: Database,
-      trend: "down",
     },
   ]
 
@@ -39,10 +32,10 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome to your OAuth2 authentication dashboard</p>
+          <p className="text-muted-foreground">Access control and user management overview</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {stats.map((stat) => (
             <Card key={stat.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -59,63 +52,33 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest authentication events</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { user: "john@example.com", action: "Logged in", time: "2 minutes ago" },
-                  { user: "sarah@example.com", action: "Token refreshed", time: "5 minutes ago" },
-                  { user: "mike@example.com", action: "Logged out", time: "10 minutes ago" },
-                  { user: "emma@example.com", action: "Logged in", time: "15 minutes ago" },
-                ].map((activity, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{activity.user}</p>
-                      <p className="text-xs text-muted-foreground">{activity.action}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">{activity.time}</span>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent User Activity</CardTitle>
+            <CardDescription>Latest user management events</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[
+                { user: "john@example.com", action: "User created", time: "2 minutes ago" },
+                { user: "sarah@example.com", action: "Role updated to Admin", time: "5 minutes ago" },
+                { user: "mike@example.com", action: "Permissions modified", time: "10 minutes ago" },
+                { user: "emma@example.com", action: "User logged in", time: "15 minutes ago" },
+              ].map((activity, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{activity.user}</p>
+                    <p className="text-xs text-muted-foreground">{activity.action}</p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>System Status</CardTitle>
-              <CardDescription>OAuth2 service health</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { service: "Authorization Server", status: "Operational", uptime: "99.9%" },
-                  { service: "Token Endpoint", status: "Operational", uptime: "99.8%" },
-                  { service: "User Info API", status: "Operational", uptime: "99.7%" },
-                  { service: "Database", status: "Operational", uptime: "100%" },
-                ].map((service, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{service.service}</p>
-                      <p className="text-xs text-green-600">{service.status}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">{service.uptime}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  <span className="text-xs text-muted-foreground">{activity.time}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   )

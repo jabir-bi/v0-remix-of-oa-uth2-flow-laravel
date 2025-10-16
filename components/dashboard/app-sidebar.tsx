@@ -4,16 +4,14 @@ import * as React from "react"
 import {
   LayoutDashboard,
   Users,
-  Settings,
+  UserCog,
+  Key,
   Shield,
-  Database,
-  Activity,
-  FileText,
-  Lock,
   ChevronRight,
   ChevronDown,
   ChevronLeft,
   LogOut,
+  User,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
@@ -32,46 +30,36 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    title: "Overview",
+    title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    title: "Users",
-    href: "/dashboard/users",
-    icon: Users,
+    title: "Profile",
+    href: "/dashboard/profile",
+    icon: User,
   },
   {
-    title: "Authentication",
-    href: "/dashboard/auth",
-    icon: Lock,
+    title: "Access Control",
+    href: "/dashboard/access",
+    icon: Shield,
     children: [
       {
-        title: "Sessions",
-        href: "/dashboard/auth/sessions",
-        icon: Activity,
+        title: "Users",
+        href: "/dashboard/users",
+        icon: Users,
+      },
+      {
+        title: "Roles",
+        href: "/dashboard/roles",
+        icon: UserCog,
       },
       {
         title: "Permissions",
-        href: "/dashboard/auth/permissions",
-        icon: Shield,
+        href: "/dashboard/permissions",
+        icon: Key,
       },
     ],
-  },
-  {
-    title: "Database",
-    href: "/dashboard/database",
-    icon: Database,
-  },
-  {
-    title: "Activity Logs",
-    href: "/dashboard/logs",
-    icon: FileText,
-  },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
   },
 ]
 
@@ -207,7 +195,7 @@ export function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
             {!collapsed && (
               <div className="flex flex-1 flex-col items-start text-left">
                 <span className="text-sm font-medium">{user?.name || "User"}</span>
-                <span className="text-xs text-muted-foreground">{user?.role || "Member"}</span>
+                <span className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</span>
               </div>
             )}
           </Button>
@@ -227,13 +215,6 @@ export function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
                   className="flex w-full items-center rounded-md px-3 py-2 text-sm hover:bg-accent"
                 >
                   Profile
-                </Link>
-                <Link
-                  href="/dashboard/settings"
-                  onClick={() => setUserDropdownOpen(false)}
-                  className="flex w-full items-center rounded-md px-3 py-2 text-sm hover:bg-accent"
-                >
-                  Settings
                 </Link>
                 <div className="my-1 h-px bg-border" />
                 <button
