@@ -17,11 +17,8 @@ A modern, enterprise-ready OAuth2 authentication system using Laravel Passport a
 - Automatic token refresh with transparent retry logic
 - Role-based access control using Spatie Laravel Permission
 - User management with granular permissions
-- Active session tracking and revocation
-- Activity logging and audit trails
 - Modern, responsive dashboard UI with dark mode
-- Advanced collapsible sidebar navigation
-- Real-time statistics and analytics
+- Collapsible sidebar navigation with Access Control section
 
 ## Prerequisites
 
@@ -258,9 +255,8 @@ php artisan db:seed --class=RolesAndPermissionsSeeder
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\SessionController;
-use App\Http\Controllers\Api\ActivityLogController;
-use App\Http\Controllers\Api\StatsController;
+use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\PermissionController;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -281,33 +277,33 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/users/{id}', [UserController::class, 'update']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
-    });
-    
-    // Role and permission management (requires manage-roles permission)
-    Route::middleware('permission:manage-roles')->group(function () {
         Route::put('/users/{id}/roles', [UserController::class, 'updateRoles']);
         Route::put('/users/{id}/permissions', [UserController::class, 'updatePermissions']);
     });
     
-    // Sessions
-    Route::get('/sessions', [SessionController::class, 'index']);
-    Route::delete('/sessions/{id}', [SessionController::class, 'destroy']);
-    Route::post('/sessions/revoke-all', [SessionController::class, 'revokeAll']);
+    // Role management (requires manage-roles permission)
+    Route::middleware('permission:manage-roles')->group(function () {
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::post('/roles', [RoleController::class, 'store']);
+        Route::get('/roles/{id}', [RoleController::class, 'show']);
+        Route::put('/roles/{id}', [RoleController::class, 'update']);
+        Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
+        Route::put('/roles/{id}/permissions', [RoleController::class, 'updatePermissions']);
+    });
     
-    // Activity logs (requires view-logs permission)
-    Route::middleware('permission:view-logs')->group(function () {
-        Route::get('/activity-logs', [ActivityLogController::class, 'index']);
-        Route::get('/users/{id}/activity-logs', [ActivityLogController::class, 'userLogs']);
+    // Permission management (requires manage-roles permission)
+    Route::middleware('permission:manage-roles')->group(function () {
+        Route::get('/permissions', [PermissionController::class, 'index']);
+        Route::post('/permissions', [PermissionController::class, 'store']);
+        Route::get('/permissions/{id}', [PermissionController::class, 'show']);
+        Route::put('/permissions/{id}', [PermissionController::class, 'update']);
+        Route::delete('/permissions/{id}', [PermissionController::class, 'destroy']);
     });
     
     // OAuth2 tokens
     Route::get('/oauth/tokens', [AuthController::class, 'tokens']);
     Route::delete('/oauth/tokens/{id}', [AuthController::class, 'revokeToken']);
     Route::post('/oauth/tokens/revoke-all', [AuthController::class, 'revokeAllTokens']);
-    
-    // Statistics
-    Route::get('/stats/dashboard', [StatsController::class, 'dashboard']);
-    Route::get('/stats/auth', [StatsController::class, 'auth']);
 });
 \`\`\`
 
@@ -322,7 +318,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\ActivityLog;
 
 class AuthController extends Controller
 {
@@ -332,15 +327,6 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $user = $request->user();
-        
-        // Log activity
-        ActivityLog::create([
-            'user_id' => $user->id,
-            'action' => 'logout',
-            'description' => 'User logged out',
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
         
         // Revoke current access token
         $user->token()->revoke();
@@ -508,7 +494,7 @@ class UserController extends Controller
 }
 \`\`\`
 
-#### `app/Http/Controllers/Api/SessionController.php`
+#### `app/Http/Controllers/Api/RoleController.php`
 
 \`\`\`php
 <?php
@@ -517,233 +503,169 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
-class SessionController extends Controller
+class RoleController extends Controller
 {
     /**
-     * Get all active sessions for current user
+     * Get all roles with permissions
      */
-    public function index(Request $request)
+    public function index()
     {
-        $sessions = DB::table('sessions')
-            ->where('user_id', $request->user()->id)
-            ->orderBy('last_activity', 'desc')
-            ->get()
-            ->map(function ($session) {
-                return [
-                    'id' => $session->id,
-                    'ip_address' => $session->ip_address,
-                    'user_agent' => $session->user_agent,
-                    'last_activity' => $session->last_activity,
-                    'is_current' => $session->id === session()->getId(),
-                ];
-            });
-        
-        return response()->json($sessions);
+        $roles = Role::with('permissions')->get();
+        return response()->json($roles);
     }
     
     /**
-     * Revoke a specific session
+     * Create a new role
      */
-    public function destroy(Request $request, $id)
+    public function store(Request $request)
     {
-        DB::table('sessions')
-            ->where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->delete();
-        
-        return response()->json(['message' => 'Session revoked']);
-    }
-    
-    /**
-     * Revoke all sessions except current
-     */
-    public function revokeAll(Request $request)
-    {
-        DB::table('sessions')
-            ->where('user_id', $request->user()->id)
-            ->where('id', '!=', session()->getId())
-            ->delete();
-        
-        return response()->json(['message' => 'All other sessions revoked']);
-    }
-}
-\`\`\`
-
-#### `app/Http/Controllers/Api/ActivityLogController.php`
-
-\`\`\`php
-<?php
-
-namespace App\Http\Controllers\Api;
-
-use App\Http\Controllers\Controller;
-use App\Models\ActivityLog;
-use Illuminate\Http\Request;
-
-class ActivityLogController extends Controller
-{
-    /**
-     * Get all activity logs (paginated)
-     */
-    public function index(Request $request)
-    {
-        $perPage = $request->input('per_page', 20);
-        
-        $logs = ActivityLog::with('user')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
-        
-        return response()->json($logs);
-    }
-    
-    /**
-     * Get activity logs for specific user
-     */
-    public function userLogs(Request $request, $userId)
-    {
-        $perPage = $request->input('per_page', 20);
-        
-        $logs = ActivityLog::where('user_id', $userId)
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
-        
-        return response()->json($logs);
-    }
-}
-\`\`\`
-
-#### `app/Http/Controllers/Api/StatsController.php`
-
-\`\`\`php
-<?php
-
-namespace App\Http\Controllers\Api;
-
-use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\ActivityLog;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-
-class StatsController extends Controller
-{
-    /**
-     * Get dashboard statistics
-     */
-    public function dashboard(Request $request)
-    {
-        return response()->json([
-            'total_users' => User::count(),
-            'active_sessions' => DB::table('sessions')->count(),
-            'auth_requests' => DB::table('oauth_access_tokens')
-                ->where('revoked', false)
-                ->count(),
-            'recent_activities' => ActivityLog::count(),
+        $validated = $request->validate([
+            'name' => 'required|string|unique:roles,name',
+            'permissions' => 'array',
+            'permissions.*' => 'exists:permissions,name',
         ]);
+        
+        $role = Role::create(['name' => $validated['name']]);
+        
+        if (isset($validated['permissions'])) {
+            $role->givePermissionTo($validated['permissions']);
+        }
+        
+        return response()->json($role->load('permissions'), 201);
     }
     
     /**
-     * Get authentication statistics
+     * Get role by ID
      */
-    public function auth(Request $request)
+    public function show($id)
     {
-        $successfulLogins = ActivityLog::where('action', 'login')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->count();
-            
-        $failedLogins = ActivityLog::where('action', 'failed_login')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->count();
+        $role = Role::with('permissions')->findOrFail($id);
+        return response()->json($role);
+    }
+    
+    /**
+     * Update role
+     */
+    public function update(Request $request, $id)
+    {
+        $role = Role::findOrFail($id);
         
-        return response()->json([
-            'successful_logins' => $successfulLogins,
-            'failed_logins' => $failedLogins,
-            'token_refreshes' => ActivityLog::where('action', 'token_refresh')
-                ->where('created_at', '>=', now()->subDays(30))
-                ->count(),
-            'active_tokens' => DB::table('oauth_access_tokens')
-                ->where('revoked', false)
-                ->count(),
+        $validated = $request->validate([
+            'name' => 'sometimes|string|unique:roles,name,' . $id,
         ]);
+        
+        $role->update($validated);
+        
+        return response()->json($role);
+    }
+    
+    /**
+     * Delete role
+     */
+    public function destroy($id)
+    {
+        $role = Role::findOrFail($id);
+        $role->delete();
+        
+        return response()->json(['message' => 'Role deleted']);
+    }
+    
+    /**
+     * Update role permissions
+     */
+    public function updatePermissions(Request $request, $id)
+    {
+        $role = Role::findOrFail($id);
+        
+        $validated = $request->validate([
+            'permissions' => 'required|array',
+            'permissions.*' => 'exists:permissions,name',
+        ]);
+        
+        $role->syncPermissions($validated['permissions']);
+        
+        return response()->json($role->load('permissions'));
     }
 }
 \`\`\`
 
-### 9. Database Migration for Activity Logs
-
-\`\`\`bash
-php artisan make:migration create_activity_logs_table
-\`\`\`
-
-#### `database/migrations/xxxx_xx_xx_create_activity_logs_table.php`
+#### `app/Http/Controllers/Api/PermissionController.php`
 
 \`\`\`php
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Http\Controllers\Api;
 
-return new class extends Migration
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Spatie\Permission\Models\Permission;
+
+class PermissionController extends Controller
 {
-    public function up(): void
+    /**
+     * Get all permissions
+     */
+    public function index()
     {
-        Schema::create('activity_logs', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('action');
-            $table->text('description')->nullable();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->json('metadata')->nullable();
-            $table->timestamps();
-            
-            $table->index(['user_id', 'created_at']);
-            $table->index('action');
-        });
+        $permissions = Permission::all();
+        return response()->json($permissions);
     }
-
-    public function down(): void
+    
+    /**
+     * Create a new permission
+     */
+    public function store(Request $request)
     {
-        Schema::dropIfExists('activity_logs');
+        $validated = $request->validate([
+            'name' => 'required|string|unique:permissions,name',
+        ]);
+        
+        $permission = Permission::create($validated);
+        
+        return response()->json($permission, 201);
     }
-};
-\`\`\`
-
-#### `app/Models/ActivityLog.php`
-
-\`\`\`php
-<?php
-
-namespace App\Models;
-
-use Illuminate\Database\Eloquent\Model;
-
-class ActivityLog extends Model
-{
-    protected $fillable = [
-        'user_id',
-        'action',
-        'description',
-        'ip_address',
-        'user_agent',
-        'metadata',
-    ];
-
-    protected $casts = [
-        'metadata' => 'array',
-    ];
-
-    public function user()
+    
+    /**
+     * Get permission by ID
+     */
+    public function show($id)
     {
-        return $this->belongsTo(User::class);
+        $permission = Permission::findOrFail($id);
+        return response()->json($permission);
+    }
+    
+    /**
+     * Update permission
+     */
+    public function update(Request $request, $id)
+    {
+        $permission = Permission::findOrFail($id);
+        
+        $validated = $request->validate([
+            'name' => 'sometimes|string|unique:permissions,name,' . $id,
+        ]);
+        
+        $permission->update($validated);
+        
+        return response()->json($permission);
+    }
+    
+    /**
+     * Delete permission
+     */
+    public function destroy($id)
+    {
+        $permission = Permission::findOrFail($id);
+        $permission->delete();
+        
+        return response()->json(['message' => 'Permission deleted']);
     }
 }
 \`\`\`
 
-### 10. Configure CORS
+### 9. Configure CORS
 
 #### `config/cors.php`
 
@@ -765,13 +687,13 @@ return [
 ];
 \`\`\`
 
-### 11. Run Migrations
+### 10. Run Migrations
 
 \`\`\`bash
 php artisan migrate
 \`\`\`
 
-### 12. Seed Test Data
+### 11. Seed Test Data
 
 \`\`\`bash
 php artisan make:seeder UserSeeder
@@ -907,11 +829,13 @@ The system uses PKCE (Proof Key for Code Exchange) for enhanced security. This e
 ### Role-Based Access Control
 Using Spatie Laravel Permission, the system provides granular control over user permissions. Roles can be assigned to users, and permissions can be checked both in the backend and frontend.
 
-### Session Management
-Users can view all active sessions and revoke them individually or all at once. This provides security and control over account access.
+### Access Control Dashboard
+The dashboard provides a clean interface organized into three core modules:
+- **Users**: Manage user accounts, assign roles and permissions
+- **Roles**: Create and manage roles with associated permissions
+- **Permissions**: Define granular permissions for fine-grained access control
 
-### Activity Logging
-All important actions are logged with IP address, user agent, and metadata for audit trails and security monitoring.
+All three modules are grouped under a collapsible "Access Control" section in the sidebar for easy navigation.
 
 ## Security Considerations
 
@@ -939,12 +863,6 @@ All important actions are logged with IP address, user agent, and metadata for a
 - Check that the redirect URI is exactly the same in both systems
 - Ensure PKCE is enabled for the OAuth2 client (use `--public` flag)
 - Check Laravel logs: `tail -f storage/logs/laravel.log`
-
-### Session Not Persisting
-- Check that cookies are being set with the correct domain
-- Verify `sameSite` and `secure` cookie settings in Next.js
-- Ensure the Next.js middleware is properly configured
-- Check browser console for cookie-related errors
 
 ### Permission Denied Errors
 - Verify roles and permissions are properly seeded
